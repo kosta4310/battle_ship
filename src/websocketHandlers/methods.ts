@@ -1,5 +1,5 @@
 import { UsersData, db, updateDataRoom } from "./parseMsg";
-import { RawData, WebSocket } from "ws";
+import { WebSocket } from "ws";
 
 export function createPlayer(
   idPlayer: number,
@@ -52,6 +52,8 @@ export function updateRoom(
   ws: WebSocket
 ) {
   let iterator = db.keys();
+  console.log(db.size);
+
   for (const client of iterator) {
     if (client !== ws) {
       const responseUpdateRoom = updateDataRoom(idGame, [
@@ -63,4 +65,53 @@ export function updateRoom(
       client.send(JSON.stringify(responseUpdateRoom));
     }
   }
+}
+
+export function startGame(ships: Array<any>, index: number, ws: WebSocket) {
+  const responseData = JSON.stringify({
+    ships,
+    currentPlayerIndex: index,
+  });
+
+  const response = JSON.stringify({
+    type: "start_game",
+    data: responseData,
+    id: 0,
+  });
+
+  ws.send(response);
+}
+
+export function changePlayersTurn(
+  currentPlayer: number,
+  arrayWs: Array<WebSocket>
+) {
+  const responseData = JSON.stringify({ currentPlayer });
+  const response = JSON.stringify({
+    type: "turn",
+    data: responseData,
+    id: 0,
+  });
+
+  arrayWs.map((ws) => ws.send(response));
+}
+
+export function attack(
+  position: { x: number; y: number },
+  currentPlayer: number,
+  status: "miss" | "killed" | "shot",
+  arrayWs: Array<WebSocket>
+) {
+  const responseData = JSON.stringify({
+    position,
+    currentPlayer,
+    status,
+  });
+
+  const response = JSON.stringify({
+    type: "attack",
+    data: responseData,
+    id: 0,
+  });
+  arrayWs.forEach((client) => client.send(response));
 }
