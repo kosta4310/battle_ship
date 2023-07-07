@@ -7,6 +7,7 @@ import {
   startGame,
   changePlayersTurn,
   attack,
+  emptyUpdateRoom,
 } from "./methods";
 
 export type UsersData = {
@@ -17,29 +18,43 @@ export type UsersData = {
 };
 
 type Game = {
-  [idGame: string]: Array<{
-    [idPlayer: string]: Array<any>;
-  }>;
-}; /*Под индексом комнаты будет массив в котором будет обьект с полем 
-idPlayer которому будет соответствовать массив кораблей*/
+  [idGame: string]: Array<
+    | {
+        [idPlayer: string]: Array<any>;
+      }
+    | number
+  >;
+};
 
-type Rooms = Array<
-  Array<number>
->; /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
+type Player = {
+  ships: Array<any>;
+  shootedByMe: Array<string>;
+  parsedShips: Array<Array<string>>;
+};
+
+/* Object game под индексом комнаты будет массив в котором будет обьект с полем 
+idPlayer которому будет соответствовать массив кораблей и текущий игрок*/
+
+/*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
+type Rooms = Array<Array<number>>;
 
 export const db = new Map<WebSocket, UsersData>();
 const rooms: Rooms = [];
 const game: Game = {};
-const idsWs = new Map<number, WebSocket>();
+const players: { [idPlayer: string]: Player } = {};
+const idsWs = new Map<number, MyWebSocket>();
 
 let idPlayer = 0;
 let idGame = 0;
 
 export interface MyWebSocket extends WebSocket {
-  idEnemy: number;
-  id: number;
-  idRoom: number;
-  idGame: number;
+  bsidEnemy: number;
+  bsid: number;
+  bsidRoom: number;
+  bsidGame: number;
+  bsname: string;
+  bspassword: string;
+  bsShips: Array<any>;
 }
 
 export function parseMsg(message: RawData, ws: MyWebSocket) {
@@ -47,13 +62,14 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
 
   const { type, data }: MessageFromClient = JSON.parse(message.toString());
   const parsedData = data ? JSON.parse(data) : "";
-  let response, responseData;
-
-  console.log(`idPlayer ${idPlayer} idGame ${idGame}`);
 
   switch (type) {
     case "reg":
       const { name, password } = parsedData;
+      ws.bsname = name;
+      ws.bspassword = password;
+      ws.bsid = idPlayer;
+
       idsWs.set(idPlayer, ws);
       createPlayer(idPlayer, name, password, ws);
 
@@ -61,14 +77,8 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       break;
 
     case "create_room":
-      idPlayer = db.get(ws)?.index as number;
-      rooms.push([idPlayer]);
-      updateRoom(
-        idGame,
-        db.get(ws)?.name as string,
-        db.get(ws)?.index as number,
-        ws
-      );
+      rooms.push([ws.bsid]);
+      updateRoom(idGame, ws.bsname, ws.bsid, ws);
 
       idGame++;
 
@@ -78,58 +88,67 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       const { indexRoom } = parsedData;
 
       if (rooms[indexRoom].length === 1) {
-        rooms[indexRoom].push(db.get(ws)?.index as number);
-        console.log(`rooms: ${rooms}`);
-        console.log(typeof rooms);
+        rooms[indexRoom].push(ws.bsid);
 
-        createGame(indexRoom, db.get(ws)?.index as number, ws);
+        createGame(indexRoom, ws.bsid, ws);
+
         const idSecondPlayer = rooms[indexRoom][0];
+        ws.bsidEnemy = idSecondPlayer;
         const websocketSecondPlayer = idsWs.get(idSecondPlayer);
+
+        if (websocketSecondPlayer) {
+          websocketSecondPlayer.bsidEnemy = ws.bsid;
+        }
+
         createGame(
           indexRoom,
           idSecondPlayer,
-          websocketSecondPlayer as WebSocket
+          websocketSecondPlayer as MyWebSocket
         );
-
-        responseData = JSON.stringify([]);
-        response = JSON.stringify({
-          type: "update_room",
-          data: responseData,
-
-          id: 0,
-        });
-
-        ws.send(response);
-        websocketSecondPlayer?.send(response);
+        emptyUpdateRoom([ws, websocketSecondPlayer as MyWebSocket]);
       }
 
       break;
 
     case "add_ships":
       let { gameId, ships, indexPlayer } = parsedData;
+      console.log("ships", ships);
+
       if (game[gameId]) {
+        ws.bsShips = ships;
         game[gameId].push({ [indexPlayer]: ships });
-        startGame(ships, indexPlayer, idsWs.get(indexPlayer) as WebSocket);
-        const [indexSecondPlayer] = rooms[gameId].filter(
-          (item) => item !== indexPlayer
-        );
-        let shipsSecondPlayer;
-        game[gameId].forEach((item) => {
-          if (item[indexSecondPlayer]) {
-            shipsSecondPlayer = item[indexSecondPlayer];
-          }
-        });
+        gfg;
+        const websocketFirstPlayer = ws;
+
+        startGame(ships, indexPlayer, websocketFirstPlayer);
+
+        const websocketSecondPlayer = idsWs.get(
+          websocketFirstPlayer.bsidEnemy
+        ) as MyWebSocket;
+
+        const shipsSecondPlayer = websocketSecondPlayer.bsShips;
+
+        const idSecondPlayer = websocketSecondPlayer.bsid;
+
         startGame(
           shipsSecondPlayer as unknown as Array<any>,
-          indexSecondPlayer,
-          idsWs.get(indexSecondPlayer) as WebSocket
+          idSecondPlayer,
+          websocketSecondPlayer
         );
         // разыгрываем чей первый ход
-        const lottery = Math.random() < 0.5 ? 0 : 1;
-        const firstTurn = rooms[gameId][lottery];
-        const arrayWebsockets = rooms[gameId].map((ind) => idsWs.get(ind));
-        changePlayersTurn(firstTurn, arrayWebsockets as Array<WebSocket>);
-      } else game[gameId] = [{ [indexPlayer]: ships }];
+        const indexRandomFirstTurn =
+          Math.random() < 0.5 ? indexPlayer : idSecondPlayer;
+        game[gameId].push(indexRandomFirstTurn);
+        fgf; /*третим элементов в массиве будет индекс текущего игрока*/
+        changePlayersTurn(indexRandomFirstTurn, [
+          websocketFirstPlayer,
+          websocketSecondPlayer,
+        ] as Array<MyWebSocket>);
+      } else {
+        game[gameId] = [{ [indexPlayer]: ships }];
+        gfg;
+        ws.bsShips = ships;
+      }
 
       break;
 
@@ -141,52 +160,24 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         indexPlayer: number;
       };
 
-      const firstWs = idsWs.get(parsedData.indexPlayer) as WebSocket;
-      const [indexSecondPlayer] = rooms[parsedData.gameId].filter(
-        (item) => item !== parsedData.indexPlayer
-      );
-      const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
-      attack({ x, y }, parsedData.indexPlayer, "shot", [secondWs, firstWs]);
+      if (parsedData.indexPlayer === game[parsedData.gameId][2]) {
+        const firstWs = idsWs.get(parsedData.indexPlayer) as WebSocket;
+        const [indexSecondPlayer] = rooms[parsedData.gameId].filter(
+          (item) => item !== parsedData.indexPlayer
+        );
+        const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
+        attack({ x, y }, parsedData.indexPlayer, "shot", [secondWs, firstWs]);
 
-      // responseData = JSON.stringify([]);
-      // response = JSON.stringify({
-      //   type: "update_room",
-      //   data: responseData,
+        changePlayersTurn(indexSecondPlayer, [secondWs, firstWs]);
+        game[parsedData.gameId].pop();
+        game[parsedData.gameId].push(indexSecondPlayer);
+      }
 
-      //   id: 0,
-      // });
-      // firstWs.send(response);
-      // secondWs.send(response);
-      changePlayersTurn(indexSecondPlayer, [secondWs, firstWs]);
       break;
-
-    // case "create_game":
-    //   const {} = parsedData;
-    //   ws.idEnemy =
-    // break;
 
     default:
       console.log("default: ", message.toString());
 
       return "Error";
   }
-}
-
-export function updateDataRoom(
-  roomId: number,
-  roomUsers: Array<{
-    name: string;
-    index: number;
-  }>
-) {
-  return {
-    type: "update_room",
-    data: JSON.stringify([
-      {
-        roomId,
-        roomUsers,
-      },
-    ]),
-    id: 0,
-  };
 }

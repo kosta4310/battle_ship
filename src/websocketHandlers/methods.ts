@@ -1,4 +1,4 @@
-import { UsersData, db, updateDataRoom } from "./parseMsg";
+import { MyWebSocket, UsersData, db } from "./parseMsg";
 import { WebSocket } from "ws";
 
 export function createPlayer(
@@ -114,4 +114,35 @@ export function attack(
     id: 0,
   });
   arrayWs.forEach((client) => client.send(response));
+}
+
+export function emptyUpdateRoom(arrayWs: Array<MyWebSocket>) {
+  const responseData = JSON.stringify([]);
+  const response = JSON.stringify({
+    type: "update_room",
+    data: responseData,
+
+    id: 0,
+  });
+
+  arrayWs.forEach((client) => client.send(response));
+}
+
+function updateDataRoom(
+  roomId: number,
+  roomUsers: Array<{
+    name: string;
+    index: number;
+  }>
+) {
+  return {
+    type: "update_room",
+    data: JSON.stringify([
+      {
+        roomId,
+        roomUsers,
+      },
+    ]),
+    id: 0,
+  };
 }

@@ -4,11 +4,11 @@ import { WebSocket, WebSocketServer } from "ws";
 export function createWebsocketServer() {
   // After starting the program displays websocket parameters - which one?
   // вывести адресс и порт на консоль
-  const wss = new WebSocketServer(
+  const wss: WebSocketServer = new WebSocketServer(
     {
       port: 3000,
     },
-    () => console.log("websocker server is running")
+    () => console.log("Websocket server is running on ", wss.address())
   );
 
   wss.on("connection", (ws: MyWebSocket) => {
