@@ -1,5 +1,6 @@
+import { MyWebSocket } from "../types/types";
 import { httpServer } from "../../src/http_server";
-import { MyWebSocket, parseMsg } from "../../src/websocketHandlers/parseMsg";
+import { parseMsg } from "../../src/websocketHandlers/parseMsg";
 import { WebSocketServer } from "ws";
 
 export const wss: WebSocketServer = new WebSocketServer(

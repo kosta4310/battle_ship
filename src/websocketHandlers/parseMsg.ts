@@ -7,9 +7,9 @@ import {
   startGame,
   changePlayersTurn,
   attack,
-  emptyUpdateRoom,
   finish,
   updateWinners,
+  UpdateRoom,
 } from "./methods";
 import { parseShipField } from "./parseShipField";
 import { StatusAttack, statusAttack } from "./statusAttack";
@@ -19,6 +19,9 @@ idPlayer которому будет соответствовать массив
 
 /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
 type Rooms = Array<Array<number>>;
+
+const listWaitedRooms = new Map<number, UpdateRoom>();
+const listWaitedPlayers = new Set<number>();
 
 const rooms: Rooms = [];
 const players: { [idPlayer: string]: Player } = {};
@@ -53,16 +56,32 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       createPlayer(idPlayer, name, password, ws);
 
       idPlayer++;
+      if (listWaitedRooms.size) {
+        const listAccessibleRooms = Array.from(listWaitedRooms.values());
+        updateRoom(listAccessibleRooms);
+      }
       break;
 
     case "create_room":
-      console.log("create room: ", rooms);
-      console.log("idGame:", idGame);
+      // console.log("create room: ", rooms);
+      // console.log("idGame:", idGame);
+      console.log(ws.bsid);
 
-      rooms.push([ws.bsid]);
-      updateRoom(idGame, ws.bsname, ws.bsid, ws);
+      if (!listWaitedPlayers.has(ws.bsid)) {
+        listWaitedPlayers.add(ws.bsid);
 
-      idGame++;
+        listWaitedRooms.set(ws.bsid, {
+          roomId: idGame,
+          roomUsers: [{ name: ws.bsname, index: ws.bsid }],
+        });
+        rooms.push([ws.bsid]);
+
+        const listAccessibleRooms = Array.from(listWaitedRooms.values());
+        console.log("list", listAccessibleRooms);
+        updateRoom(listAccessibleRooms);
+
+        idGame++;
+      }
 
       break;
 
@@ -87,7 +106,7 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
           idSecondPlayer,
           websocketSecondPlayer as MyWebSocket
         );
-        emptyUpdateRoom([ws, websocketSecondPlayer as MyWebSocket]);
+        // emptyUpdateRoom([ws, websocketSecondPlayer as MyWebSocket]);
       }
 
       break;

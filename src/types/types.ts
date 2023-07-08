@@ -1,12 +1,12 @@
 import { WebSocket } from "ws";
 
-export type Reg = {
-  type: "reg";
-  data: RegData;
-  id: number;
-};
+// export type Reg = {
+//   type: "reg";
+//   data: RegData;
+//   id: number;
+// };
 
-export type RegData = {
+type RegData = {
   name: string;
   index: number;
   error: boolean;
@@ -45,11 +45,3 @@ export interface MyWebSocket extends WebSocket {
   bspassword: string;
   bsShips: Array<any>;
 }
-
-export type Ship = {
-  position: { x: number; y: number };
-  direction: boolean;
-  type: string;
-  length: number;
-  left: number;
-};

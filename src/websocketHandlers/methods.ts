@@ -40,24 +40,39 @@ export function createGame(idGame: number, idPlayer: number, ws: WebSocket) {
   ws.send(response);
 }
 
-export function updateRoom(
-  idGame: number,
-  name: string,
-  index: number,
-  ws: WebSocket
-) {
-  // let iterator = db.keys();
+export type UpdateRoom = {
+  roomId: number;
+  roomUsers: Array<{ name: string; index: number }>;
+};
 
-  for (const client of wss.clients) {
-    if (client !== ws) {
-      const responseUpdateRoom = updateDataRoom(idGame, [
+export function updateRoom(
+  // idGame: number,
+  // name: string,
+  // index: number,
+  // ws: WebSocket
+  arr: Array<UpdateRoom>
+) {
+  // const responseData = JSON.stringify(arr);
+  const responseData = JSON.stringify([
+    {
+      roomId: 2,
+      roomUsers: [
         {
-          name,
-          index,
+          name: "fdf",
+          index: 3,
         },
-      ]);
-      client.send(JSON.stringify(responseUpdateRoom));
-    }
+      ],
+    },
+  ]);
+  console.log(responseData);
+
+  const response = JSON.stringify({
+    type: "update_room",
+    data: responseData,
+    id: 0,
+  });
+  for (const client of wss.clients) {
+    client.send(JSON.stringify(response));
   }
 }
 
@@ -110,36 +125,17 @@ export function attack(
   arrayWs.forEach((client) => client.send(response));
 }
 
-export function emptyUpdateRoom(arrayWs: Array<MyWebSocket>) {
-  const responseData = JSON.stringify([]);
-  const response = JSON.stringify({
-    type: "update_room",
-    data: responseData,
+// export function emptyUpdateRoom(arrayWs: Array<MyWebSocket>) {
+//   const responseData = JSON.stringify([]);
+//   const response = JSON.stringify({
+//     type: "update_room",
+//     data: responseData,
 
-    id: 0,
-  });
+//     id: 0,
+//   });
 
-  arrayWs.forEach((client) => client.send(response));
-}
-
-function updateDataRoom(
-  roomId: number,
-  roomUsers: Array<{
-    name: string;
-    index: number;
-  }>
-) {
-  return {
-    type: "update_room",
-    data: JSON.stringify([
-      {
-        roomId,
-        roomUsers,
-      },
-    ]),
-    id: 0,
-  };
-}
+//   arrayWs.forEach((client) => client.send(response));
+// }
 
 export function finish(winPlayer: number, arrayWs: Array<WebSocket>) {
   const responseData = JSON.stringify({ winPlayer });
@@ -165,3 +161,19 @@ export function updateWinners(
 
   arrayWs.forEach((client) => client.send(response));
 }
+
+// export function invalidInputData(params: type) {
+//   const responseData = {
+//     name: name,
+//     index: idPlayer,
+//     error: false,
+//     errorText: "something",
+//   };
+//   const stringifiedData = JSON.stringify(responseData);
+//   const response = JSON.stringify({
+//     type: "reg",
+//     data: stringifiedData,
+//     id: 0,
+//   });
+//   ws.send(response);
+// }
