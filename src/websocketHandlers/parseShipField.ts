@@ -8,7 +8,6 @@ export type Ship = {
 
 export function parseShipField(ships: Array<Ship>) {
   ships.forEach((ship) => (ship.left = ship.length));
-  console.log(ships);
   const parsedShips = ships.reduce((acc: Array<Array<string>>, curr) => {
     const arrayShip = [];
     const { x, y } = curr.position;
@@ -25,8 +24,6 @@ export function parseShipField(ships: Array<Ship>) {
     }
     return [...acc, arrayShip];
   }, []);
-
-  console.log(parsedShips);
 
   return parsedShips;
 }

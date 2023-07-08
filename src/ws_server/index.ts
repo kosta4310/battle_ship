@@ -2,7 +2,7 @@ import { httpServer } from "../../src/http_server";
 import { MyWebSocket, parseMsg } from "../../src/websocketHandlers/parseMsg";
 import { WebSocketServer } from "ws";
 
-const wss: WebSocketServer = new WebSocketServer(
+export const wss: WebSocketServer = new WebSocketServer(
   {
     port: 3000,
   },

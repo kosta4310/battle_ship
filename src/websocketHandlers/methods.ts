@@ -1,6 +1,7 @@
-import { MyWebSocket, UsersData, db } from "./parseMsg";
+import { MyWebSocket, UsersData } from "./parseMsg";
 import { WebSocket } from "ws";
 import { StatusAttack } from "./statusAttack";
+import { wss } from "../../src/ws_server";
 
 export function createPlayer(
   idPlayer: number,
@@ -8,12 +9,12 @@ export function createPlayer(
   password: string,
   ws: WebSocket
 ) {
-  db.set(ws, {
-    name,
-    password,
-    index: idPlayer,
-    idGame: 0,
-  });
+  // db.set(ws, {
+  //   name,
+  //   password,
+  //   index: idPlayer,
+  //   idGame: 0,
+  // });
 
   const responseData = {
     name: name,
@@ -31,8 +32,8 @@ export function createPlayer(
 }
 
 export function createGame(idGame: number, idPlayer: number, ws: WebSocket) {
-  const updateUserData = { ...db.get(ws), idGame } as UsersData;
-  db.set(ws, updateUserData);
+  // const updateUserData = { ...db.get(ws), idGame } as UsersData;
+  // db.set(ws, updateUserData);
   const responseData = JSON.stringify({
     idGame,
     idPlayer,
@@ -52,9 +53,9 @@ export function updateRoom(
   index: number,
   ws: WebSocket
 ) {
-  let iterator = db.keys();
+  // let iterator = db.keys();
 
-  for (const client of iterator) {
+  for (const client of wss.clients) {
     if (client !== ws) {
       const responseUpdateRoom = updateDataRoom(idGame, [
         {
