@@ -8,6 +8,8 @@ import {
   changePlayersTurn,
   attack,
   emptyUpdateRoom,
+  finish,
+  updateWinners,
 } from "./methods";
 import { parseShipField } from "./parseShipField";
 import { StatusAttack, statusAttack } from "./statusAttack";
@@ -23,6 +25,9 @@ type Player = {
   ships: Array<any>;
   shooted: Array<string>;
   parsedShips: Array<Array<string>>;
+  killedShips: number;
+  wins: number;
+  name: string;
 };
 
 /* Object game под индексом комнаты будет массив в котором будет обьект с полем 
@@ -35,6 +40,7 @@ export const db = new Map<WebSocket, UsersData>();
 const rooms: Rooms = [];
 const players: { [idPlayer: string]: Player } = {};
 const idsWs = new Map<number, MyWebSocket>();
+const winners = new Map<number, { name: string; wins: number }>();
 
 let idPlayer = 0;
 let idGame = 0;
@@ -62,9 +68,12 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       ws.bspassword = password;
       ws.bsid = idPlayer;
       players[idPlayer.toString()] = {
+        name: name,
         ships: [],
         shooted: [],
         parsedShips: [],
+        killedShips: 9,
+        wins: 0,
       };
       idsWs.set(idPlayer, ws);
       createPlayer(idPlayer, name, password, ws);
@@ -164,6 +173,7 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       );
       const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
 
+      // зайдет в IF если соблюден ход игрока и выстрел в эту точку еще не был сделан
       if (
         parsedData.indexPlayer === rooms[parsedData.gameId][2] &&
         !players[parsedData.indexPlayer].shooted.includes("" + x + y)
@@ -193,6 +203,8 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
               ]);
             }
           }
+
+          players[parsedData.indexPlayer].killedShips++;
         } else {
           attack({ x, y }, parsedData.indexPlayer, status as StatusAttack, [
             secondWs,
@@ -208,6 +220,34 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         }
       } else if (parsedData.indexPlayer === rooms[parsedData.gameId][2]) {
         changePlayersTurn(parsedData.indexPlayer, [secondWs, firstWs]);
+      }
+
+      // добавление победителя
+
+      if (players[parsedData.indexPlayer].killedShips === 10) {
+        players[parsedData.indexPlayer].killedShips = 0;
+
+        finish(parsedData.indexPlayer, [secondWs, firstWs]);
+
+        if (winners.get(parsedData.indexPlayer)) {
+          const winner = winners.get(parsedData.indexPlayer) as {
+            name: string;
+            wins: number;
+          };
+          const countWins = winner?.wins as number;
+          winner.wins = countWins + 1;
+        } else {
+          winners.set(parsedData.indexPlayer, {
+            name: players[parsedData.indexPlayer].name,
+            wins: 1,
+          });
+        }
+        const wins = Array.from(winners.values());
+        console.log("winners: ", winners);
+
+        console.log("wins", wins);
+
+        updateWinners(wins, [firstWs, secondWs]);
       }
 
       break;

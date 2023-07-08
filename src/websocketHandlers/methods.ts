@@ -146,3 +146,28 @@ function updateDataRoom(
     id: 0,
   };
 }
+
+export function finish(winPlayer: number, arrayWs: Array<WebSocket>) {
+  const responseData = JSON.stringify({ winPlayer });
+  const response = JSON.stringify({
+    type: "finish",
+    data: responseData,
+    id: 0,
+  });
+
+  arrayWs.forEach((client) => client.send(response));
+}
+
+export function updateWinners(
+  winners: Array<{ name: string; wins: number }>,
+  arrayWs: Array<WebSocket>
+) {
+  const responseData = JSON.stringify(winners);
+  const response = JSON.stringify({
+    type: "update_winners",
+    data: responseData,
+    id: 0,
+  });
+
+  arrayWs.forEach((client) => client.send(response));
+}
