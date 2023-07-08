@@ -1,3 +1,5 @@
+import { WebSocket } from "ws";
+
 export type Reg = {
   type: "reg";
   data: RegData;
@@ -17,8 +19,37 @@ export type MessageFromClient = {
   id: number;
 };
 
-type Player = {
+export type UsersData = {
   name: string;
   password: string;
   index: number;
+  idGame: number;
+};
+
+export type Player = {
+  ships: Array<any>;
+  shooted: Array<string>;
+  parsedShips: Array<Array<string>>;
+  killedShips: number;
+  wins: number;
+  name: string;
+  password: string;
+};
+
+export interface MyWebSocket extends WebSocket {
+  bsidEnemy: number;
+  bsid: number;
+  bsidRoom: number;
+  bsidGame: number;
+  bsname: string;
+  bspassword: string;
+  bsShips: Array<any>;
+}
+
+export type Ship = {
+  position: { x: number; y: number };
+  direction: boolean;
+  type: string;
+  length: number;
+  left: number;
 };

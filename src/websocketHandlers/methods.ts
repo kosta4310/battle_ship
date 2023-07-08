@@ -1,7 +1,7 @@
-import { MyWebSocket, UsersData } from "./parseMsg";
 import { WebSocket } from "ws";
 import { StatusAttack } from "./statusAttack";
 import { wss } from "../../src/ws_server";
+import { MyWebSocket } from "../types/types";
 
 export function createPlayer(
   idPlayer: number,
@@ -9,13 +9,6 @@ export function createPlayer(
   password: string,
   ws: WebSocket
 ) {
-  // db.set(ws, {
-  //   name,
-  //   password,
-  //   index: idPlayer,
-  //   idGame: 0,
-  // });
-
   const responseData = {
     name: name,
     index: idPlayer,

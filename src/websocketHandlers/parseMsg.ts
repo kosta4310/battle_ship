@@ -1,5 +1,5 @@
 import { RawData, WebSocket } from "ws";
-import { MessageFromClient } from "../types/types";
+import { MessageFromClient, MyWebSocket, Player } from "../types/types";
 import {
   createPlayer,
   createGame,
@@ -14,30 +14,12 @@ import {
 import { parseShipField } from "./parseShipField";
 import { StatusAttack, statusAttack } from "./statusAttack";
 
-export type UsersData = {
-  name: string;
-  password: string;
-  index: number;
-  idGame: number;
-};
-
-type Player = {
-  ships: Array<any>;
-  shooted: Array<string>;
-  parsedShips: Array<Array<string>>;
-  killedShips: number;
-  wins: number;
-  name: string;
-  password: string;
-};
-
 /* Object game под индексом комнаты будет массив в котором будет обьект с полем 
 idPlayer которому будет соответствовать массив кораблей и текущий игрок*/
 
 /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
 type Rooms = Array<Array<number>>;
 
-// export const db = new Map<WebSocket, UsersData>();
 const rooms: Rooms = [];
 const players: { [idPlayer: string]: Player } = {};
 const idsWs = new Map<number, MyWebSocket>();
@@ -45,16 +27,6 @@ const winners = new Map<number, { name: string; wins: number }>();
 
 let idPlayer = 0;
 let idGame = 0;
-
-export interface MyWebSocket extends WebSocket {
-  bsidEnemy: number;
-  bsid: number;
-  bsidRoom: number;
-  bsidGame: number;
-  bsname: string;
-  bspassword: string;
-  bsShips: Array<any>;
-}
 
 export function parseMsg(message: RawData, ws: MyWebSocket) {
   console.log("message from client: %s", message.toString());
@@ -237,9 +209,6 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         });
 
         // -------------- понемять на 00000000000
-
-        // players[parsedData.indexPlayer].killedShips = 0;
-        // players[parsedData.indexPlayer].shooted = [];
 
         finish(parsedData.indexPlayer, [secondWs, firstWs]);
 

@@ -1,10 +1,4 @@
-export type Ship = {
-  position: { x: number; y: number };
-  direction: boolean;
-  type: string;
-  length: number;
-  left: number;
-};
+import { Ship } from "../types/types";
 
 export function parseShipField(ships: Array<Ship>) {
   ships.forEach((ship) => (ship.left = ship.length));
