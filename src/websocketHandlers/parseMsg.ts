@@ -28,6 +28,7 @@ type Player = {
   killedShips: number;
   wins: number;
   name: string;
+  password: string;
 };
 
 /* Object game под индексом комнаты будет массив в котором будет обьект с полем 
@@ -36,7 +37,7 @@ idPlayer которому будет соответствовать массив
 /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
 type Rooms = Array<Array<number>>;
 
-export const db = new Map<WebSocket, UsersData>();
+// export const db = new Map<WebSocket, UsersData>();
 const rooms: Rooms = [];
 const players: { [idPlayer: string]: Player } = {};
 const idsWs = new Map<number, MyWebSocket>();
@@ -68,12 +69,13 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       ws.bspassword = password;
       ws.bsid = idPlayer;
       players[idPlayer.toString()] = {
-        name: name,
+        name,
         ships: [],
         shooted: [],
         parsedShips: [],
         killedShips: 9,
         wins: 0,
+        password,
       };
       idsWs.set(idPlayer, ws);
       createPlayer(idPlayer, name, password, ws);
@@ -82,6 +84,9 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       break;
 
     case "create_room":
+      console.log("create room: ", rooms);
+      console.log("idGame:", idGame);
+
       rooms.push([ws.bsid]);
       updateRoom(idGame, ws.bsname, ws.bsid, ws);
 
@@ -116,6 +121,8 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       break;
 
     case "add_ships":
+      console.log("rooms", rooms);
+
       let { gameId, ships, indexPlayer } = parsedData;
       const parsedShips = parseShipField(ships);
       players[indexPlayer].parsedShips = parsedShips;
@@ -152,8 +159,8 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
           websocketSecondPlayer,
         ] as Array<MyWebSocket>);
       } else {
-        rooms[gameId].push(0);
-        players[gameId].ships = ships;
+        rooms[gameId].push(-1);
+        players[indexPlayer].ships = ships;
         ws.bsShips = ships;
       }
 
@@ -195,7 +202,6 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
               StatusAttack
             >) {
               const [position, status] = item;
-              console.log(position, status);
 
               attack(position, parsedData.indexPlayer, status, [
                 secondWs,
@@ -225,7 +231,15 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       // добавление победителя
 
       if (players[parsedData.indexPlayer].killedShips === 10) {
-        players[parsedData.indexPlayer].killedShips = 0;
+        [parsedData.indexPlayer, indexSecondPlayer].forEach((ind) => {
+          players[ind].killedShips = 9;
+          players[ind].shooted = [];
+        });
+
+        // -------------- понемять на 00000000000
+
+        // players[parsedData.indexPlayer].killedShips = 0;
+        // players[parsedData.indexPlayer].shooted = [];
 
         finish(parsedData.indexPlayer, [secondWs, firstWs]);
 
