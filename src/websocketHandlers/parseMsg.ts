@@ -9,6 +9,8 @@ import {
   attack,
   emptyUpdateRoom,
 } from "./methods";
+import { parseShipField } from "./parseShipField";
+import { StatusAttack, statusAttack } from "./statusAttack";
 
 export type UsersData = {
   name: string;
@@ -17,18 +19,9 @@ export type UsersData = {
   idGame: number;
 };
 
-type Game = {
-  [idGame: string]: Array<
-    | {
-        [idPlayer: string]: Array<any>;
-      }
-    | number
-  >;
-};
-
 type Player = {
   ships: Array<any>;
-  shootedByMe: Array<string>;
+  shooted: Array<string>;
   parsedShips: Array<Array<string>>;
 };
 
@@ -40,7 +33,6 @@ type Rooms = Array<Array<number>>;
 
 export const db = new Map<WebSocket, UsersData>();
 const rooms: Rooms = [];
-const game: Game = {};
 const players: { [idPlayer: string]: Player } = {};
 const idsWs = new Map<number, MyWebSocket>();
 
@@ -69,7 +61,11 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       ws.bsname = name;
       ws.bspassword = password;
       ws.bsid = idPlayer;
-
+      players[idPlayer.toString()] = {
+        ships: [],
+        shooted: [],
+        parsedShips: [],
+      };
       idsWs.set(idPlayer, ws);
       createPlayer(idPlayer, name, password, ws);
 
@@ -112,12 +108,13 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
 
     case "add_ships":
       let { gameId, ships, indexPlayer } = parsedData;
-      console.log("ships", ships);
-
-      if (game[gameId]) {
+      const parsedShips = parseShipField(ships);
+      players[indexPlayer].parsedShips = parsedShips;
+      if (rooms[gameId].length === 3) {
+        rooms[gameId].pop();
         ws.bsShips = ships;
-        game[gameId].push({ [indexPlayer]: ships });
-        gfg;
+
+        players[indexPlayer].ships = ships;
         const websocketFirstPlayer = ws;
 
         startGame(ships, indexPlayer, websocketFirstPlayer);
@@ -136,17 +133,18 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
           websocketSecondPlayer
         );
         // разыгрываем чей первый ход
-        const indexRandomFirstTurn =
+        const indexFirstTurn =
           Math.random() < 0.5 ? indexPlayer : idSecondPlayer;
-        game[gameId].push(indexRandomFirstTurn);
-        fgf; /*третим элементов в массиве будет индекс текущего игрока*/
-        changePlayersTurn(indexRandomFirstTurn, [
+        rooms[gameId].push(indexFirstTurn);
+
+        /*третим элементов в массиве будет индекс текущего игрока*/
+        changePlayersTurn(indexFirstTurn, [
           websocketFirstPlayer,
           websocketSecondPlayer,
         ] as Array<MyWebSocket>);
       } else {
-        game[gameId] = [{ [indexPlayer]: ships }];
-        gfg;
+        rooms[gameId].push(0);
+        players[gameId].ships = ships;
         ws.bsShips = ships;
       }
 
@@ -160,17 +158,56 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         indexPlayer: number;
       };
 
-      if (parsedData.indexPlayer === game[parsedData.gameId][2]) {
-        const firstWs = idsWs.get(parsedData.indexPlayer) as WebSocket;
-        const [indexSecondPlayer] = rooms[parsedData.gameId].filter(
-          (item) => item !== parsedData.indexPlayer
-        );
-        const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
-        attack({ x, y }, parsedData.indexPlayer, "shot", [secondWs, firstWs]);
+      const firstWs = idsWs.get(parsedData.indexPlayer) as WebSocket;
+      const [indexSecondPlayer] = rooms[parsedData.gameId].filter(
+        (item) => item !== parsedData.indexPlayer
+      );
+      const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
 
-        changePlayersTurn(indexSecondPlayer, [secondWs, firstWs]);
-        game[parsedData.gameId].pop();
-        game[parsedData.gameId].push(indexSecondPlayer);
+      if (
+        parsedData.indexPlayer === rooms[parsedData.gameId][2] &&
+        !players[parsedData.indexPlayer].shooted.includes("" + x + y)
+      ) {
+        players[parsedData.indexPlayer].shooted.push("" + x + y);
+        const { ships, parsedShips } = players[indexSecondPlayer];
+
+        const [status, killedShipWhithEmptyCell] = statusAttack({
+          x,
+          y,
+          ships,
+          parsedShips,
+        });
+
+        if (status === StatusAttack.Killed) {
+          if (killedShipWhithEmptyCell) {
+            for (const item of killedShipWhithEmptyCell as Map<
+              { x: number; y: number },
+              StatusAttack
+            >) {
+              const [position, status] = item;
+              console.log(position, status);
+
+              attack(position, parsedData.indexPlayer, status, [
+                secondWs,
+                firstWs,
+              ]);
+            }
+          }
+        } else {
+          attack({ x, y }, parsedData.indexPlayer, status as StatusAttack, [
+            secondWs,
+            firstWs,
+          ]);
+        }
+
+        if (status === StatusAttack.Miss) {
+          changePlayersTurn(indexSecondPlayer, [secondWs, firstWs]);
+          rooms[parsedData.gameId].splice(-1, 1, indexSecondPlayer);
+        } else {
+          changePlayersTurn(parsedData.indexPlayer, [secondWs, firstWs]);
+        }
+      } else if (parsedData.indexPlayer === rooms[parsedData.gameId][2]) {
+        changePlayersTurn(parsedData.indexPlayer, [secondWs, firstWs]);
       }
 
       break;

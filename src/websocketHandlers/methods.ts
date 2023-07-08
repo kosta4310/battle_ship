@@ -1,5 +1,6 @@
 import { MyWebSocket, UsersData, db } from "./parseMsg";
 import { WebSocket } from "ws";
+import { StatusAttack } from "./statusAttack";
 
 export function createPlayer(
   idPlayer: number,
@@ -52,7 +53,6 @@ export function updateRoom(
   ws: WebSocket
 ) {
   let iterator = db.keys();
-  console.log(db.size);
 
   for (const client of iterator) {
     if (client !== ws) {
@@ -99,7 +99,7 @@ export function changePlayersTurn(
 export function attack(
   position: { x: number; y: number },
   currentPlayer: number,
-  status: "miss" | "killed" | "shot",
+  status: StatusAttack,
   arrayWs: Array<WebSocket>
 ) {
   const responseData = JSON.stringify({
