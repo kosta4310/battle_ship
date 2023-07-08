@@ -53,24 +53,14 @@ export function updateRoom(
   arr: Array<UpdateRoom>
 ) {
   // const responseData = JSON.stringify(arr);
-  const responseData = JSON.stringify([
-    {
-      roomId: 2,
-      roomUsers: [
-        {
-          name: "fdf",
-          index: 3,
-        },
-      ],
-    },
-  ]);
+  const responseData = JSON.stringify(arr);
   console.log(responseData);
 
-  const response = JSON.stringify({
+  const response = {
     type: "update_room",
     data: responseData,
     id: 0,
-  });
+  };
   for (const client of wss.clients) {
     client.send(JSON.stringify(response));
   }
