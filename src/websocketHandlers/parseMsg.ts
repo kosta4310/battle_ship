@@ -63,8 +63,6 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       break;
 
     case "create_room":
-      // console.log("create room: ", rooms);
-      // console.log("idGame:", idGame);
       console.log(ws.bsid);
 
       if (!listWaitedPlayers.has(ws.bsid)) {
@@ -87,18 +85,19 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
 
     case "add_user_to_room":
       const { indexRoom } = parsedData;
-
+      const idfirstPlayer = ws.bsid;
       if (rooms[indexRoom].length === 1) {
-        rooms[indexRoom].push(ws.bsid);
+        rooms[indexRoom].push(idfirstPlayer);
 
-        createGame(indexRoom, ws.bsid, ws);
+        createGame(indexRoom, idfirstPlayer, ws);
 
         const idSecondPlayer = rooms[indexRoom][0];
+
         ws.bsidEnemy = idSecondPlayer;
         const websocketSecondPlayer = idsWs.get(idSecondPlayer);
 
         if (websocketSecondPlayer) {
-          websocketSecondPlayer.bsidEnemy = ws.bsid;
+          websocketSecondPlayer.bsidEnemy = idfirstPlayer;
         }
 
         createGame(
@@ -106,7 +105,15 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
           idSecondPlayer,
           websocketSecondPlayer as MyWebSocket
         );
-        // emptyUpdateRoom([ws, websocketSecondPlayer as MyWebSocket]);
+
+        [idfirstPlayer, idSecondPlayer].forEach((item) => {
+          listWaitedPlayers.delete(item);
+          listWaitedRooms.delete(item);
+        });
+
+        const listAccessibleRooms = Array.from(listWaitedRooms.values());
+        console.log("list", listAccessibleRooms);
+        updateRoom(listAccessibleRooms);
       }
 
       break;
