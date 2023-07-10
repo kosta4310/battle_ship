@@ -2,6 +2,7 @@ import { WebSocket } from "ws";
 import { StatusAttack } from "./statusAttack";
 import { wss } from "../../src/ws_server";
 import { MyWebSocket } from "../types/types";
+import { idsWs, players, winners } from "./parseMsg";
 
 export function createPlayer(
   idPlayer: number,
@@ -25,8 +26,6 @@ export function createPlayer(
 }
 
 export function createGame(idGame: number, idPlayer: number, ws: WebSocket) {
-  // const updateUserData = { ...db.get(ws), idGame } as UsersData;
-  // db.set(ws, updateUserData);
   const responseData = JSON.stringify({
     idGame,
     idPlayer,
@@ -45,23 +44,18 @@ export type UpdateRoom = {
   roomUsers: Array<{ name: string; index: number }>;
 };
 
-export function updateRoom(
-  // idGame: number,
-  // name: string,
-  // index: number,
-  // ws: WebSocket
-  arr: Array<UpdateRoom>
-) {
-  // const responseData = JSON.stringify(arr);
-  const responseData = JSON.stringify(arr);
-  console.log(responseData);
+export function updateRoom(arr: Array<UpdateRoom>) {
+  for (const client of Array.from(idsWs.values())) {
+    const filteredArray = arr.filter((item) => {
+      return item.roomUsers[0].index !== client.bsid;
+    });
+    const responseData = JSON.stringify(filteredArray);
 
-  const response = {
-    type: "update_room",
-    data: responseData,
-    id: 0,
-  };
-  for (const client of wss.clients) {
+    const response = {
+      type: "update_room",
+      data: responseData,
+      id: 0,
+    };
     client.send(JSON.stringify(response));
   }
 }
@@ -115,18 +109,6 @@ export function attack(
   arrayWs.forEach((client) => client.send(response));
 }
 
-// export function emptyUpdateRoom(arrayWs: Array<MyWebSocket>) {
-//   const responseData = JSON.stringify([]);
-//   const response = JSON.stringify({
-//     type: "update_room",
-//     data: responseData,
-
-//     id: 0,
-//   });
-
-//   arrayWs.forEach((client) => client.send(response));
-// }
-
 export function finish(winPlayer: number, arrayWs: Array<WebSocket>) {
   const responseData = JSON.stringify({ winPlayer });
   const response = JSON.stringify({
@@ -140,7 +122,7 @@ export function finish(winPlayer: number, arrayWs: Array<WebSocket>) {
 
 export function updateWinners(
   winners: Array<{ name: string; wins: number }>,
-  arrayWs: Array<WebSocket>
+  arrayWebSockets: Set<WebSocket>
 ) {
   const responseData = JSON.stringify(winners);
   const response = JSON.stringify({
@@ -149,7 +131,23 @@ export function updateWinners(
     id: 0,
   });
 
-  arrayWs.forEach((client) => client.send(response));
+  arrayWebSockets.forEach((client) => client.send(response));
+}
+
+export function addWinner(idCurrentPlayer: number) {
+  if (winners.get(idCurrentPlayer)) {
+    const winner = winners.get(idCurrentPlayer) as {
+      name: string;
+      wins: number;
+    };
+    const countWins = winner?.wins as number;
+    winner.wins = countWins + 1;
+  } else {
+    winners.set(idCurrentPlayer, {
+      name: players[idCurrentPlayer].name,
+      wins: 1,
+    });
+  }
 }
 
 // export function invalidInputData(params: type) {
