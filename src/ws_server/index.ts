@@ -26,8 +26,8 @@ process.on("SIGINT", () => {
   });
   wss.close(() => {
     httpServer.close(() => process.exit(0));
+    console.log("Tcp server is closed");
   });
 });
 
-httpServer.on("close", () => console.log("Http server is closed"));
-wss.on("close", () => console.log("Tcp server is closed"));
+// wss.on("close", () => console.log("Tcp server is closed"));
