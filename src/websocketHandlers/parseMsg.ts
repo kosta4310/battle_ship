@@ -6,11 +6,13 @@ import {
   updateRoom,
   startGame,
   changePlayersTurn,
-  attack,
+  responseAttack,
   finish,
   updateWinners,
   UpdateRoom,
   addWinner,
+  parsingAttack,
+  getPositionRandomAttack,
 } from "./methods";
 import { parseShipField } from "./parseShipField";
 import { StatusAttack, statusAttack } from "./statusAttack";
@@ -25,7 +27,7 @@ type Rooms = Array<Array<number>>;
 const listWaitedRooms = new Map<number, UpdateRoom>();
 const listWaitedPlayers = new Set<number>();
 
-const rooms: Rooms = [];
+export const rooms: Rooms = [];
 export const players: { [idPlayer: string]: Player } = {};
 export const idsWs = new Map<number, MyWebSocket>();
 export const winners = new Map<number, { name: string; wins: number }>();
@@ -173,85 +175,23 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       break;
 
     case "attack":
-      const {
-        x,
-        y,
-        indexPlayer: idCurrentPlayer,
-      } = parsedData as {
-        x: number;
-        y: number;
-        gameId: number;
-        indexPlayer: number;
+      parsingAttack(parsedData, ws);
+
+      break;
+
+    case "randomAttack":
+      const { gameId: indexGame, indexPlayer: currentPlayer } = parsedData;
+      const positionRandomAttack = getPositionRandomAttack(
+        indexGame,
+        currentPlayer
+      );
+      const data = {
+        ...positionRandomAttack,
+        gameId: indexGame,
+        indexPlayer: currentPlayer,
       };
 
-      const firstWs = idsWs.get(idCurrentPlayer) as WebSocket;
-      const [indexSecondPlayer] = rooms[parsedData.gameId].filter(
-        (item) => item !== idCurrentPlayer
-      );
-      const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
-
-      // зайдет в IF если соблюден ход игрока и выстрел в эту точку еще не был сделан
-      if (
-        idCurrentPlayer === rooms[parsedData.gameId][2] &&
-        !players[idCurrentPlayer].shooted.includes("" + x + y)
-      ) {
-        players[idCurrentPlayer].shooted.push("" + x + y);
-        const { ships, parsedShips } = players[indexSecondPlayer];
-
-        const [status, killedShipWhithEmptyCell] = statusAttack({
-          x,
-          y,
-          ships,
-          parsedShips,
-        });
-
-        if (status === StatusAttack.Killed) {
-          if (killedShipWhithEmptyCell) {
-            for (const item of killedShipWhithEmptyCell as Map<
-              { x: number; y: number },
-              StatusAttack
-            >) {
-              const [position, status] = item;
-
-              attack(position, idCurrentPlayer, status, [secondWs, firstWs]);
-            }
-          }
-
-          players[idCurrentPlayer].killedShips++;
-        } else {
-          attack({ x, y }, idCurrentPlayer, status as StatusAttack, [
-            secondWs,
-            firstWs,
-          ]);
-        }
-
-        if (status === StatusAttack.Miss) {
-          changePlayersTurn(indexSecondPlayer, [secondWs, firstWs]);
-          rooms[parsedData.gameId].splice(-1, 1, indexSecondPlayer);
-        } else {
-          changePlayersTurn(idCurrentPlayer, [secondWs, firstWs]);
-        }
-      } else if (idCurrentPlayer === rooms[parsedData.gameId][2]) {
-        changePlayersTurn(idCurrentPlayer, [secondWs, firstWs]);
-      }
-
-      // добавление победителя
-
-      if (players[idCurrentPlayer].killedShips === 10) {
-        [idCurrentPlayer, indexSecondPlayer].forEach((ind) => {
-          players[ind].killedShips = 9;
-          players[ind].shooted = [];
-        });
-
-        // -------------- killedShips понемять на 0
-
-        finish(idCurrentPlayer, [secondWs, firstWs]);
-
-        addWinner(idCurrentPlayer);
-        const arrayWinners = Array.from(winners.values());
-        updateWinners(arrayWinners, wss.clients);
-      }
-
+      parsingAttack(data, ws);
       break;
 
     default:

@@ -1,8 +1,8 @@
 import { WebSocket } from "ws";
-import { StatusAttack } from "./statusAttack";
+import { StatusAttack, statusAttack } from "./statusAttack";
 import { wss } from "../../src/ws_server";
 import { MyWebSocket } from "../types/types";
-import { idsWs, players, winners } from "./parseMsg";
+import { idsWs, players, rooms, winners } from "./parseMsg";
 
 export function createPlayer(
   idPlayer: number,
@@ -89,7 +89,7 @@ export function changePlayersTurn(
   arrayWs.map((ws) => ws.send(response));
 }
 
-export function attack(
+export function responseAttack(
   position: { x: number; y: number },
   currentPlayer: number,
   status: StatusAttack,
@@ -148,6 +148,109 @@ export function addWinner(idCurrentPlayer: number) {
       wins: 1,
     });
   }
+}
+
+type AttackInputData = {
+  x: number;
+  y: number;
+  gameId: number;
+  indexPlayer: number;
+};
+
+export function parsingAttack(
+  { x, y, gameId, indexPlayer: idCurrentPlayer }: AttackInputData,
+  ws: MyWebSocket
+) {
+  const firstWs = ws as MyWebSocket;
+  const indexSecondPlayer = firstWs.bsidEnemy;
+
+  const secondWs = idsWs.get(indexSecondPlayer) as WebSocket;
+
+  // зайдет в IF если соблюден ход игрока и выстрел в эту точку еще не был сделан
+  if (
+    idCurrentPlayer === rooms[gameId][2] &&
+    !players[idCurrentPlayer].shooted.includes("" + x + y)
+  ) {
+    players[idCurrentPlayer].shooted.push("" + x + y);
+    const { ships, parsedShips } = players[indexSecondPlayer];
+
+    const [status, killedShipWhithEmptyCell] = statusAttack({
+      x,
+      y,
+      ships,
+      parsedShips,
+    });
+
+    if (status === StatusAttack.Killed) {
+      if (killedShipWhithEmptyCell) {
+        for (const item of killedShipWhithEmptyCell as Map<
+          { x: number; y: number },
+          StatusAttack
+        >) {
+          const [position, status] = item;
+
+          responseAttack(position, idCurrentPlayer, status, [
+            secondWs,
+            firstWs,
+          ]);
+        }
+      }
+
+      players[idCurrentPlayer].killedShips++;
+    } else {
+      responseAttack({ x, y }, idCurrentPlayer, status as StatusAttack, [
+        secondWs,
+        firstWs,
+      ]);
+    }
+
+    if (status === StatusAttack.Miss) {
+      changePlayersTurn(indexSecondPlayer, [secondWs, firstWs]);
+      rooms[gameId].splice(-1, 1, indexSecondPlayer);
+    } else {
+      changePlayersTurn(idCurrentPlayer, [secondWs, firstWs]);
+    }
+  } else if (idCurrentPlayer === rooms[gameId][2]) {
+    changePlayersTurn(idCurrentPlayer, [secondWs, firstWs]);
+  }
+
+  // добавление победителя
+
+  if (players[idCurrentPlayer].killedShips === 10) {
+    [idCurrentPlayer, indexSecondPlayer].forEach((ind) => {
+      players[ind].killedShips = 9;
+      players[ind].shooted = [];
+    });
+
+    // -------------- killedShips понемять на 0
+
+    finish(idCurrentPlayer, [secondWs, firstWs]);
+
+    addWinner(idCurrentPlayer);
+    const arrayWinners = Array.from(winners.values());
+    updateWinners(arrayWinners, wss.clients);
+  }
+}
+
+export function getPositionRandomAttack(
+  indexGame: number,
+  currentPlayer: number
+): { x: number; y: number } {
+  const arrayAllAccessCells: Array<string> = [];
+
+  for (let x = 0; x <= 9; x++) {
+    for (let y = 0; y <= 9; y++) {
+      const elem = "" + x + y;
+      if (!players[currentPlayer].shooted.includes(elem)) {
+        arrayAllAccessCells.push(elem);
+      }
+    }
+  }
+
+  const randomIndex = Math.floor(Math.random() * arrayAllAccessCells.length);
+  const arrayPositionAsString = arrayAllAccessCells[randomIndex].split("");
+  const [x, y] = arrayPositionAsString.map((item) => Number(item));
+  return { x, y };
 }
 
 // export function invalidInputData(params: type) {
