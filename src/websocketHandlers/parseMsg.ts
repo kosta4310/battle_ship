@@ -24,8 +24,8 @@ idPlayer которому будет соответствовать массив
 /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
 type Rooms = Array<Array<number>>;
 
-const listWaitedRooms = new Map<number, UpdateRoom>();
-const listWaitedPlayers = new Set<number>();
+export const listWaitedRooms = new Map<number, UpdateRoom>();
+export const listWaitedPlayers = new Set<number>();
 
 export const rooms: Rooms = [];
 export const players: { [idPlayer: string]: Player } = {};

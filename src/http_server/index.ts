@@ -17,4 +17,7 @@ export const httpServer = http.createServer(function (req, res) {
   });
 });
 
-httpServer.on("close", () => console.log("Http server is closed"));
+httpServer.on("close", () => {
+  console.log("Http server is closed");
+  process.exit(0);
+});

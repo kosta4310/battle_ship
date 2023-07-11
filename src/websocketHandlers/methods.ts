@@ -2,7 +2,14 @@ import { WebSocket } from "ws";
 import { StatusAttack, statusAttack } from "./statusAttack";
 import { wss } from "../../src/ws_server";
 import { MyWebSocket } from "../types/types";
-import { idsWs, players, rooms, winners } from "./parseMsg";
+import {
+  idsWs,
+  listWaitedPlayers,
+  listWaitedRooms,
+  players,
+  rooms,
+  winners,
+} from "./parseMsg";
 
 export function createPlayer(
   idPlayer: number,
@@ -251,6 +258,21 @@ export function getPositionRandomAttack(
   const arrayPositionAsString = arrayAllAccessCells[randomIndex].split("");
   const [x, y] = arrayPositionAsString.map((item) => Number(item));
   return { x, y };
+}
+
+export function disconnectUser(ws: MyWebSocket) {
+  const id = ws.bsid;
+  delete players[id];
+  idsWs.delete(id);
+  listWaitedPlayers.delete(id);
+  listWaitedRooms.delete(id);
+  const idWinner = ws.bsidEnemy;
+
+  finish(idWinner, [idsWs.get(idWinner) as MyWebSocket]);
+
+  addWinner(idWinner);
+  const arrayWinners = Array.from(winners.values());
+  updateWinners(arrayWinners, wss.clients);
 }
 
 // export function invalidInputData(params: type) {

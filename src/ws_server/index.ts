@@ -1,7 +1,10 @@
 import { MyWebSocket } from "../types/types";
-import { httpServer } from "../../src/http_server";
 import { parseMsg } from "../../src/websocketHandlers/parseMsg";
 import { WebSocketServer } from "ws";
+import { httpServer } from "../http_server";
+import { disconnectUser } from "../websocketHandlers/methods";
+
+export let isLiveServer = true;
 
 export const wss: WebSocketServer = new WebSocketServer(
   {
@@ -16,18 +19,29 @@ wss.on("connection", (ws: MyWebSocket) => {
   ws.on("message", (msg) => {
     parseMsg(msg, ws);
   });
+
+  ws.on("close", () => {
+    if (isLiveServer) {
+      disconnectUser(ws);
+    }
+    console.log("client tcp is closed");
+  });
 });
 
 process.on("SIGINT", () => {
+  isLiveServer = false;
   console.log("\nAll connection and sockets will closed");
+
   wss.clients.forEach((socket) => {
-    socket.send("server_was_closed");
+    socket.send(JSON.stringify({ text: `server_was_closed` }));
     socket.close();
   });
-  wss.close(() => {
-    httpServer.close(() => process.exit(0));
-    console.log("Tcp server is closed");
-  });
+
+  wss.close(() => {});
+
+  httpServer.close();
 });
 
-// wss.on("close", () => console.log("Tcp server is closed"));
+wss.on("close", () => {
+  console.log("Tcp server is closed");
+});
