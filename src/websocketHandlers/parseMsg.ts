@@ -16,6 +16,7 @@ import {
   singlePlay,
   singlePlayAddShips,
   singlePlayAttack,
+  regError,
 } from "./methods";
 import { parseShipField } from "./parseShipField";
 import { StatusAttack, statusAttack } from "./statusAttack";
@@ -64,7 +65,7 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       const user = Object.values(players).find((user) => user.name === name);
 
       if (user && user.password !== password) {
-        regError();
+        regError(name, idPlayer, ws);
       } else {
         ws.bsname = name;
         ws.bspassword = password;

@@ -266,7 +266,7 @@ export function getPositionRandomAttack(
 
 export function disconnectUser(ws: MyWebSocket) {
   const id = ws.bsid;
-  delete players[id];
+  // delete players[id];
   idsWs.delete(id);
   listWaitedPlayers.delete(id);
   listWaitedRooms.delete(id);
@@ -444,6 +444,21 @@ function getPositionBotAttack(gameId: number): Array<number> {
   return array[idx].split("").map((el) => Number(el));
 }
 
+export function regError(name: string, idPlayer: number, ws: WebSocket) {
+  const responseData = {
+    name: name,
+    index: idPlayer,
+    error: true,
+    errorText: "User already exist",
+  };
+  const stringifiedData = JSON.stringify(responseData);
+  const response = JSON.stringify({
+    type: "reg",
+    data: stringifiedData,
+    id: 0,
+  });
+  ws.send(response);
+}
 // export function invalidInputData(params: type) {
 //   const responseData = {
 //     name: name,
