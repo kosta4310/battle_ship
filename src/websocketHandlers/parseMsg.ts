@@ -61,7 +61,7 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
             ships: [],
             shooted: [],
             parsedShips: [],
-            killedShips: 9,
+            killedShips: 0,
             wins: 0,
             password,
           };
@@ -201,8 +201,10 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         gameId: indexGame,
         indexPlayer: currentPlayer,
       };
+      if (ws.bsSinglePlay) {
+        singlePlayAttack(data, ws);
+      } else parsingAttack(data, ws);
 
-      parsingAttack(data, ws);
       break;
 
     case "single_play":
@@ -216,7 +218,7 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         ships: [],
         shooted: [],
         parsedShips: [],
-        killedShips: 9,
+        killedShips: 0,
         wins: 0,
         enemy: 0,
       };

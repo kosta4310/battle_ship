@@ -192,12 +192,14 @@ export function parsingAttack(
   const secondWs = idsWs.get(indexSecondPlayer) as MyWebSocket;
 
   // зайдет в IF если соблюден ход игрока и выстрел в эту точку еще не был сделан
+
   if (
     idCurrentPlayer === rooms[gameId][2] &&
     !players[idCurrentPlayer].shooted.includes("" + x + y)
   ) {
     players[idCurrentPlayer].shooted.push("" + x + y);
     const { ships, parsedShips } = players[indexSecondPlayer];
+    console.log(ships);
 
     const [status, killedShipWhithEmptyCell] = statusAttack({
       x,
@@ -243,11 +245,9 @@ export function parsingAttack(
 
   if (players[idCurrentPlayer].killedShips === 10) {
     [idCurrentPlayer, indexSecondPlayer].forEach((ind) => {
-      players[ind].killedShips = 9;
+      players[ind].killedShips = 0;
       players[ind].shooted = [];
     });
-
-    // -------------- killedShips понемять на 0
 
     finish(idCurrentPlayer, [secondWs, firstWs]);
 
@@ -282,7 +282,6 @@ export function getPositionRandomAttack(
 
 export function disconnectUser(ws: MyWebSocket) {
   const id = ws.bsid;
-  // delete players[id];
   idsWs.delete(id);
   listWaitedPlayers.delete(id);
   listWaitedRooms.delete(id);
@@ -425,11 +424,9 @@ export function singlePlayAttack(
   // добавление победителя
   if (players[idCurrentPlayer].killedShips === 10) {
     [idCurrentPlayer].forEach((ind) => {
-      players[ind].killedShips = 9;
+      players[ind].killedShips = 0;
       players[ind].shooted = [];
     });
-
-    // -------------- killedShips понемять на 0
 
     finish(idCurrentPlayer, [ws]);
 
