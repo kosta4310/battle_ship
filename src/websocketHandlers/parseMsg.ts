@@ -13,6 +13,9 @@ import {
   addWinner,
   parsingAttack,
   getPositionRandomAttack,
+  singlePlay,
+  singlePlayAddShips,
+  singlePlayAttack,
 } from "./methods";
 import { parseShipField } from "./parseShipField";
 import { StatusAttack, statusAttack } from "./statusAttack";
@@ -23,17 +26,30 @@ idPlayer которому будет соответствовать массив
 
 /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
 type Rooms = Array<Array<number>>;
+// type BotRooms = Array<Array<number>>;
+// type Bot = {
+//   enemy: number;
+//   ships: Array<any>;
+//   shooted: Array<string>;
+//   parsedShips: Array<Array<string>>;
+//   killedShips: number;
+//   wins: number;
+//   name: string;
+// };
 
 export const listWaitedRooms = new Map<number, UpdateRoom>();
 export const listWaitedPlayers = new Set<number>();
 
+// export const botRooms: BotRooms = [];
 export const rooms: Rooms = [];
+// export const bots: { [idBot: string]: Bot } = {};
 export const players: { [idPlayer: string]: Player } = {};
 export const idsWs = new Map<number, MyWebSocket>();
 export const winners = new Map<number, { name: string; wins: number }>();
 
 let idPlayer = 0;
 let idGame = 0;
+// let idBot = idPlayer;
 
 export function parseMsg(message: RawData, ws: MyWebSocket) {
   console.log("message from client: %s", message.toString());
@@ -44,37 +60,42 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
   switch (type) {
     case "reg":
       const { name, password } = parsedData;
-      ws.bsname = name;
-      ws.bspassword = password;
-      ws.bsid = idPlayer;
-      players[idPlayer.toString()] = {
-        name,
-        ships: [],
-        shooted: [],
-        parsedShips: [],
-        killedShips: 9,
-        wins: 0,
-        password,
-      };
-      idsWs.set(idPlayer, ws);
-      createPlayer(idPlayer, name, password, ws);
 
-      idPlayer++;
+      const user = Object.values(players).find((user) => user.name === name);
 
-      if (listWaitedRooms.size) {
-        const listAccessibleRooms = Array.from(listWaitedRooms.values());
-        updateRoom(listAccessibleRooms);
+      if (user && user.password !== password) {
+        regError();
+      } else {
+        ws.bsname = name;
+        ws.bspassword = password;
+        ws.bsid = idPlayer;
+        ws.bsSinglePlay = false;
+        players[idPlayer.toString()] = {
+          name,
+          ships: [],
+          shooted: [],
+          parsedShips: [],
+          killedShips: 9,
+          wins: 0,
+          password,
+        };
+        idsWs.set(idPlayer, ws);
+        createPlayer(idPlayer, name, password, ws);
+
+        idPlayer++;
+
+        if (listWaitedRooms.size) {
+          const listAccessibleRooms = Array.from(listWaitedRooms.values());
+          updateRoom(listAccessibleRooms);
+        }
+
+        if (winners.size) {
+          updateWinners(Array.from(winners.values()), new Set([ws]));
+        }
       }
-
-      if (winners.size) {
-        updateWinners(Array.from(winners.values()), new Set([ws]));
-      }
-
       break;
 
     case "create_room":
-      console.log(ws.bsid);
-
       if (!listWaitedPlayers.has(ws.bsid)) {
         listWaitedPlayers.add(ws.bsid);
 
@@ -85,7 +106,6 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         rooms.push([ws.bsid]);
 
         const listAccessibleRooms = Array.from(listWaitedRooms.values());
-        console.log("list", listAccessibleRooms);
         updateRoom(listAccessibleRooms);
 
         idGame++;
@@ -122,60 +142,63 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
         });
 
         const listAccessibleRooms = Array.from(listWaitedRooms.values());
-        console.log("list", listAccessibleRooms);
         updateRoom(listAccessibleRooms);
       }
 
       break;
 
     case "add_ships":
-      console.log("rooms", rooms);
-
-      let { gameId, ships, indexPlayer } = parsedData;
-      const parsedShips = parseShipField(ships);
-      players[indexPlayer].parsedShips = parsedShips;
-      if (rooms[gameId].length === 3) {
-        rooms[gameId].pop();
-        ws.bsShips = ships;
-
-        players[indexPlayer].ships = ships;
-        const websocketFirstPlayer = ws;
-
-        startGame(ships, indexPlayer, websocketFirstPlayer);
-
-        const websocketSecondPlayer = idsWs.get(
-          websocketFirstPlayer.bsidEnemy
-        ) as MyWebSocket;
-
-        const shipsSecondPlayer = websocketSecondPlayer.bsShips;
-
-        const idSecondPlayer = websocketSecondPlayer.bsid;
-
-        startGame(
-          shipsSecondPlayer as unknown as Array<any>,
-          idSecondPlayer,
-          websocketSecondPlayer
-        );
-        // разыгрываем чей первый ход
-        const indexFirstTurn =
-          Math.random() < 0.5 ? indexPlayer : idSecondPlayer;
-        rooms[gameId].push(indexFirstTurn);
-
-        /*третим элементов в массиве будет индекс текущего игрока*/
-        changePlayersTurn(indexFirstTurn, [
-          websocketFirstPlayer,
-          websocketSecondPlayer,
-        ] as Array<MyWebSocket>);
+      if (ws.bsSinglePlay) {
+        singlePlayAddShips(parsedData, ws);
       } else {
-        rooms[gameId].push(-1);
-        players[indexPlayer].ships = ships;
-        ws.bsShips = ships;
+        let { gameId, ships, indexPlayer } = parsedData;
+        const parsedShips = parseShipField(ships);
+        players[indexPlayer].parsedShips = parsedShips;
+
+        if (rooms[gameId].length === 3) {
+          rooms[gameId].pop();
+          ws.bsShips = ships;
+
+          players[indexPlayer].ships = ships;
+          const websocketFirstPlayer = ws;
+
+          startGame(ships, indexPlayer, websocketFirstPlayer);
+
+          const enemyId = websocketFirstPlayer.bsidEnemy as number;
+          const websocketSecondPlayer = idsWs.get(enemyId) as MyWebSocket;
+
+          const shipsSecondPlayer = websocketSecondPlayer.bsShips;
+
+          const idSecondPlayer = websocketSecondPlayer.bsid;
+
+          startGame(
+            shipsSecondPlayer as unknown as Array<any>,
+            idSecondPlayer,
+            websocketSecondPlayer
+          );
+          // разыгрываем чей первый ход
+          const indexFirstTurn =
+            Math.random() < 0.5 ? indexPlayer : idSecondPlayer;
+          rooms[gameId].push(indexFirstTurn);
+
+          /*третим элементов в массиве будет индекс текущего игрока*/
+          changePlayersTurn(indexFirstTurn, [
+            websocketFirstPlayer,
+            websocketSecondPlayer,
+          ] as Array<MyWebSocket>);
+        } else {
+          rooms[gameId].push(-1);
+          players[indexPlayer].ships = ships;
+          ws.bsShips = ships;
+        }
       }
 
       break;
 
     case "attack":
-      parsingAttack(parsedData, ws);
+      if (ws.bsSinglePlay) {
+        singlePlayAttack(parsedData, ws);
+      } else parsingAttack(parsedData, ws);
 
       break;
 
@@ -194,9 +217,31 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       parsingAttack(data, ws);
       break;
 
+    case "single_play":
+      rooms.push([idPlayer, ws.bsid]);
+      ws.bsidEnemy = idPlayer;
+
+      ws.bsSinglePlay = true;
+
+      players[idPlayer] = {
+        name: `bot${idPlayer}`,
+        ships: [],
+        shooted: [],
+        parsedShips: [],
+        killedShips: 9,
+        wins: 0,
+        enemy: 0,
+      };
+      players[idPlayer].enemy = ws.bsid;
+      singlePlay(idGame, ws);
+
+      idPlayer++;
+      idGame++;
+      break;
+
     default:
       console.log("default: ", message.toString());
 
-      return "Error";
+      break;
   }
 }

@@ -33,11 +33,13 @@ export type Player = {
   killedShips: number;
   wins: number;
   name: string;
-  password: string;
+  password?: string;
+  enemy?: number;
 };
 
 export interface MyWebSocket extends WebSocket {
-  bsidEnemy: number;
+  bsSinglePlay: boolean;
+  bsidEnemy: number | null;
   bsid: number;
   bsidRoom: number;
   bsidGame: number;

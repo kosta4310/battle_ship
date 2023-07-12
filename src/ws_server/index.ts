@@ -21,10 +21,9 @@ wss.on("connection", (ws: MyWebSocket) => {
   });
 
   ws.on("close", () => {
-    if (isLiveServer) {
+    if (isLiveServer && !ws.bsSinglePlay) {
       disconnectUser(ws);
     }
-    console.log("client tcp is closed");
   });
 });
 
@@ -33,6 +32,7 @@ process.on("SIGINT", () => {
   console.log("\nAll connection and sockets will closed");
 
   wss.clients.forEach((socket) => {
+    console.log("client tcp is closed");
     socket.send(JSON.stringify({ text: `server_was_closed` }));
     socket.close();
   });
