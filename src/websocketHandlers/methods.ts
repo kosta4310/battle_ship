@@ -23,7 +23,7 @@ export function createPlayer(
     name: name,
     index: idPlayer,
     error: false,
-    errorText: "something",
+    errorText: "",
   };
   const stringifiedData = JSON.stringify(responseData);
   const response = JSON.stringify({
@@ -476,18 +476,3 @@ export function regError(name: string, idPlayer: number, ws: WebSocket) {
   ws.send(response);
   console.log(`response from server: ${response}`);
 }
-// export function invalidInputData(params: type) {
-//   const responseData = {
-//     name: name,
-//     index: idPlayer,
-//     error: false,
-//     errorText: "something",
-//   };
-//   const stringifiedData = JSON.stringify(responseData);
-//   const response = JSON.stringify({
-//     type: "reg",
-//     data: stringifiedData,
-//     id: 0,
-//   });
-//   ws.send(response);
-// }

@@ -1,4 +1,4 @@
-import { RawData, WebSocket } from "ws";
+import { RawData } from "ws";
 import { MessageFromClient, MyWebSocket, Player } from "../types/types";
 import {
   createPlayer,
@@ -6,11 +6,8 @@ import {
   updateRoom,
   startGame,
   changePlayersTurn,
-  responseAttack,
-  finish,
   updateWinners,
   UpdateRoom,
-  addWinner,
   parsingAttack,
   getPositionRandomAttack,
   singlePlay,
@@ -19,39 +16,26 @@ import {
   regError,
 } from "./methods";
 import { parseShipField } from "./parseShipField";
-import { StatusAttack, statusAttack } from "./statusAttack";
-import { wss } from "../ws_server";
+import { isValidInputData } from "./isValid";
 
 /* Object game под индексом комнаты будет массив в котором будет обьект с полем 
 idPlayer которому будет соответствовать массив кораблей и текущий игрок*/
 
 /*Массив, в котором по индексу(индекс комнаты) находятся index игроков в этих комнатах*/
 type Rooms = Array<Array<number>>;
-// type BotRooms = Array<Array<number>>;
-// type Bot = {
-//   enemy: number;
-//   ships: Array<any>;
-//   shooted: Array<string>;
-//   parsedShips: Array<Array<string>>;
-//   killedShips: number;
-//   wins: number;
-//   name: string;
-// };
 
 export const listWaitedRooms = new Map<number, UpdateRoom>();
 export const listWaitedPlayers = new Set<number>();
 
-// export const botRooms: BotRooms = [];
 export const rooms: Rooms = [];
-// export const bots: { [idBot: string]: Bot } = {};
 export const players: { [idPlayer: string]: Player } = {};
 export const idsWs = new Map<number, MyWebSocket>();
 export const winners = new Map<number, { name: string; wins: number }>();
 
 let idPlayer = 0;
 let idGame = 0;
-// let idBot = idPlayer;
-
+// password should contain any word character (equivalent to [a-zA-Z0-9_])
+// name should start from a letter and should contain onle letter or digit
 export function parseMsg(message: RawData, ws: MyWebSocket) {
   console.log("message from client: %s", message.toString());
 
@@ -62,38 +46,41 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
     case "reg":
       const { name, password } = parsedData;
 
-      const user = Object.values(players).find((user) => user.name === name);
+      if (isValidInputData(name, password, idPlayer, ws)) {
+        const user = Object.values(players).find((user) => user.name === name);
 
-      if (user && user.password !== password) {
-        regError(name, idPlayer, ws);
-      } else {
-        ws.bsname = name;
-        ws.bspassword = password;
-        ws.bsid = idPlayer;
-        ws.bsSinglePlay = false;
-        players[idPlayer.toString()] = {
-          name,
-          ships: [],
-          shooted: [],
-          parsedShips: [],
-          killedShips: 9,
-          wins: 0,
-          password,
-        };
-        idsWs.set(idPlayer, ws);
-        createPlayer(idPlayer, name, password, ws);
+        if (user && user.password !== password) {
+          regError(name, idPlayer, ws);
+        } else {
+          ws.bsname = name;
+          ws.bspassword = password;
+          ws.bsid = idPlayer;
+          ws.bsSinglePlay = false;
+          players[idPlayer.toString()] = {
+            name,
+            ships: [],
+            shooted: [],
+            parsedShips: [],
+            killedShips: 9,
+            wins: 0,
+            password,
+          };
+          idsWs.set(idPlayer, ws);
+          createPlayer(idPlayer, name, password, ws);
 
-        idPlayer++;
+          idPlayer++;
 
-        if (listWaitedRooms.size) {
-          const listAccessibleRooms = Array.from(listWaitedRooms.values());
-          updateRoom(listAccessibleRooms);
-        }
+          if (listWaitedRooms.size) {
+            const listAccessibleRooms = Array.from(listWaitedRooms.values());
+            updateRoom(listAccessibleRooms);
+          }
 
-        if (winners.size) {
-          updateWinners(Array.from(winners.values()), new Set([ws]));
+          if (winners.size) {
+            updateWinners(Array.from(winners.values()), new Set([ws]));
+          }
         }
       }
+
       break;
 
     case "create_room":

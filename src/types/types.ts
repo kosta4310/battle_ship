@@ -1,18 +1,5 @@
 import { WebSocket } from "ws";
 
-// export type Reg = {
-//   type: "reg";
-//   data: RegData;
-//   id: number;
-// };
-
-type RegData = {
-  name: string;
-  index: number;
-  error: boolean;
-  errorText: string;
-};
-
 export type MessageFromClient = {
   type: string;
   data: string;
