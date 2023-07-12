@@ -32,6 +32,7 @@ export function createPlayer(
     id: 0,
   });
   ws.send(response);
+  console.log(`response from server: ${response}`);
 }
 
 export function createGame(idGame: number, idPlayer: number, ws: WebSocket) {
@@ -46,6 +47,7 @@ export function createGame(idGame: number, idPlayer: number, ws: WebSocket) {
   });
 
   ws.send(response);
+  console.log(`response from server: ${response}`);
 }
 
 export type UpdateRoom = {
@@ -60,12 +62,13 @@ export function updateRoom(arr: Array<UpdateRoom>) {
     });
     const responseData = JSON.stringify(filteredArray);
 
-    const response = {
+    const response = JSON.stringify({
       type: "update_room",
       data: responseData,
       id: 0,
-    };
-    client.send(JSON.stringify(response));
+    });
+    client.send(response);
+    console.log(`response from server: ${response}`);
   }
 }
 
@@ -82,6 +85,7 @@ export function startGame(ships: Array<any>, index: number, ws: WebSocket) {
   });
 
   ws.send(response);
+  console.log(`response from server: ${response}`);
 }
 
 export function changePlayersTurn(
@@ -95,7 +99,10 @@ export function changePlayersTurn(
     id: 0,
   });
 
-  arrayWs.map((ws) => ws.send(response));
+  arrayWs.map((ws) => {
+    ws.send(response);
+    console.log(`response from server: ${response}`);
+  });
 }
 
 export function responseAttack(
@@ -115,7 +122,10 @@ export function responseAttack(
     data: responseData,
     id: 0,
   });
-  arrayWs.forEach((client) => client.send(response));
+  arrayWs.forEach((client) => {
+    client.send(response);
+    console.log(`response from server: ${response}`);
+  });
 }
 
 export function finish(winPlayer: number, arrayWs: Array<MyWebSocket>) {
@@ -126,7 +136,10 @@ export function finish(winPlayer: number, arrayWs: Array<MyWebSocket>) {
     id: 0,
   });
 
-  arrayWs.forEach((client) => client.send(response));
+  arrayWs.forEach((client) => {
+    client.send(response);
+    console.log(`response from server: ${response}`);
+  });
 }
 
 export function updateWinners(
@@ -140,7 +153,10 @@ export function updateWinners(
     id: 0,
   });
 
-  arrayWebSockets.forEach((client) => client.send(response));
+  arrayWebSockets.forEach((client) => {
+    client.send(response);
+    console.log(`response from server: ${response}`);
+  });
 }
 
 export function addWinner(idCurrentPlayer: number) {
@@ -458,6 +474,7 @@ export function regError(name: string, idPlayer: number, ws: WebSocket) {
     id: 0,
   });
   ws.send(response);
+  console.log(`response from server: ${response}`);
 }
 // export function invalidInputData(params: type) {
 //   const responseData = {

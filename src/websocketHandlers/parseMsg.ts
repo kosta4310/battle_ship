@@ -241,8 +241,6 @@ export function parseMsg(message: RawData, ws: MyWebSocket) {
       break;
 
     default:
-      console.log("default: ", message.toString());
-
       break;
   }
 }
