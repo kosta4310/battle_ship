@@ -1,0 +1,8 @@
+{
+    "watch": ["src", "./index"],
+    "ext": "ts",
+    "exec": "ts-node ./index.ts",
+    "events": {
+        "start": "cls || clear"
+    }
+}
